@@ -1,9 +1,16 @@
 function generateLevel(){
+    wallcolor = randomRange(10,13);
+    floorcolor = randomRange(2,3);
+
     tryTo('generate map',function(){
         return generateTiles() == randomPassableTile().getConnectedTiles().length;
     });
     
     generateMonsters();
+
+    for(let i=0; i<3; i++){
+        randomPassableTile().treasure = true;
+    }
 }
 
 function generateTiles(){

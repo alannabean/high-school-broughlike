@@ -16,15 +16,18 @@ function drawSprite(sprite,x,y){
         0,
         16,
         16,
-        x*tileSize,
-        y*tileSize,
+        x*tileSize + shakeX,
+        y*tileSize + shakeY,
         tileSize,
         tileSize
     );
 }
 
 function draw(){
+    if(gameState == "running" || gameState == "dead"){
     ctx.clearRect(0,0,canvas.width,canvas.height);
+
+    screenshake();
 
     for(let i = 0; i < numTiles; i++){
         for(let j = 0; j < numTiles; j++){
@@ -36,6 +39,10 @@ function draw(){
         monsters[i].draw();
     }
     player.draw();
+
+    drawText("Level: "+level, 15, false, 20, "grey");
+    drawText("Score: "+score, 15, false, 35, "black");
+    }
 }
 
 function tick(){
@@ -46,4 +53,127 @@ function tick(){
             monsters.splice(k,1);
         }
     }
+
+    if(player.dead){
+        addScore(score, false);
+        gameState = "dead";
+    }
+
+    spawnCounter--;
+    if(spawnCounter <= 0){
+        spawnMonster();
+        spawnCounter = spawnRate;
+        spawnRate--;
+    }
+}
+
+
+    function showTitle(){
+        ctx.fillStyle = 'rgba(0,0,0,.75)';
+        ctx.fillRect(0,0,canvas.width,canvas.height);
+
+        gameState = "title";
+
+        drawText("HIGH", 40, true, canvas.height/2 - 110, "white");
+        drawText("SCHOOL", 40, true, canvas.height/2 - 70, "white");
+
+        drawScores();
+    }
+
+    function startGame(){
+        level = 1;
+        score = 0;
+
+        startLevel(startingHp);
+
+        gameState = "running";
+    }
+
+    function startLevel(playerHp){
+        spawnRate = 15;
+        spawnCounter = spawnRate;
+
+        generateLevel();
+
+        player = new Player(randomPassableTile());
+        player.hp = playerHp;
+        
+        randomPassableTile().replace(Exit);
+    }
+
+    function drawText(text, size, centered, textY, color){
+        ctx.fillStyle = color;
+        ctx.font = size + "px monospace";
+        let textX;
+        if(centered){
+            textX = (canvas.width-ctx.measureText(text).width)/2;     
+        }else{
+            textX = canvas.width-uiWidth*tileSize+30;
+        }
+        ctx.fillText(text, textX, textY);
+    }
+
+    function getScores(){
+        if(localStorage["scores"]){
+            return JSON.parse(localStorage["scores"]);
+        }else{
+            return [];
+        }
+    }
+
+    function addScore(score, won){
+        let scores = getScores();
+        let scoreObject = {score: score, run: 1, totalScore: score, active: won};
+        let lastScore = scores.pop();
+
+        if(lastScore){
+            if(lastScore.active){
+                scoreObject.run = lastScore.run +1;
+                scoreObject.totalScore += lastScore.totalScore;
+            }else{
+                scores.push(lastScore);
+            }
+        }
+        scores.push(scoreObject);
+
+        localStorage["scores"] = JSON.stringify(scores);
+    }
+
+function drawScores(){
+    let scores = getScores();
+    if(scores.length){
+        drawText(
+            rightPad([" RUN"," SCORE"," TOTAL"]),
+            16,
+            true,
+            canvas.height/2-40,
+            "grey"
+        );
+
+        let newestScore = scores.pop();
+        scores.sort(function(a,b){
+            return b.totalScore - a.totalScore;
+        });
+        scores.unshift(newestScore);
+
+        for (let i=0; i<Math.min(10,scores.length);i++){
+            let scoreText = rightPad([scores[i].run, scores[i].score, scores[i].totalScore]);
+            drawText(
+                scoreText,
+                16,
+                true,
+                canvas.height - 176+i*24,
+                i == 0 ? "white" : "grey"
+            );
+        }
+    }
+}
+
+function screenshake(){
+    if(shakeAmount){
+        shakeAmount--;
+    }
+    let shakeAngle = Math.random()*Math.PI*2;
+    shakeX = Math.round(Math.cos(shakeAngle)*shakeAmount);
+    shakeY = Math.round(Math.sin(shakeAngle)*shakeAmount);
 }
